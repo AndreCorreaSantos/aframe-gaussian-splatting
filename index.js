@@ -83,10 +83,15 @@ AFRAME.registerComponent("gaussian_splatting", {
 				out vec4 vColor;
 				out vec2 vPosition;
 				uniform vec2 viewport;
+				
 				uniform float time;
+				uniform vec3  c1_position;
+				uniform vec3  c2_position;
+
 				uniform float focal;
 				uniform mat4 gsProjectionMatrix;
 				uniform mat4 gsModelViewMatrix;
+
 
 				attribute uint splatIndex;
 				uniform sampler2D centerAndScaleTexture;
@@ -158,7 +163,7 @@ AFRAME.registerComponent("gaussian_splatting", {
 						float((colorUint >> uint(16)) & uint(0xFF)) / 255.0,
 						float(colorUint >> uint(24)) / 255.0
 					);
-					vPosition = position.xy;
+					vPosition = vec2(position.x+2.0*sin(time),position.y);
 
 					gl_Position = vec4(
 						vCenter 
@@ -176,7 +181,7 @@ AFRAME.registerComponent("gaussian_splatting", {
 					if (A < -4.0) discard;
 					float B = exp(A) * vColor.a;
 					vec3 newCol = vColor.rgb;
-					newCol.r += sin(time)*10.0 ;
+					newCol.r = pow(pow(vPosition.y,2.0) + pow(vPosition.x,2.0),0.5) ;
 					gl_FragColor = vec4(newCol, B);
 				}
 			`,
@@ -460,7 +465,7 @@ AFRAME.registerComponent("gaussian_splatting", {
 		}
 		  // Update the time uniform
 		if (this.mesh && this.mesh.material.uniforms.time !== undefined) {
-		this.mesh.material.uniforms.time.value = time * 0.001; // Convert from ms to seconds if needed
+		this.mesh.material.uniforms.time.value = time*0.001; // Convert from ms to seconds if needed
 		}
 	},
 	getProjectionMatrix: function(camera) {
