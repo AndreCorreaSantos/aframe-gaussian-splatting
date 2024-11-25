@@ -7,6 +7,7 @@ uniform vec2 viewport;
 uniform float focal;
 uniform mat4 gsProjectionMatrix;
 uniform mat4 gsModelViewMatrix;
+uniform int toggle_offset_;
 
 attribute uint splatIndex;
 uniform sampler2D centerAndScaleTexture;

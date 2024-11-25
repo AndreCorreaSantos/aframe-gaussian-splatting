@@ -3,7 +3,9 @@ AFRAME.registerComponent("gaussian_splatting", {
 		src: {type: 'string', default: "train.splat"},
 		cutoutEntity: {type: 'selector'},
 		pixelRatio: {type: 'number', default: 1},
-		xrPixelRatio: {type: 'number', default: 0.5}
+		xrPixelRatio: {type: 'number', default: 0.5},
+		toggle_color:{type: 'bool', default: false},
+		toggle_offset:{type: 'bool', default: false},
 	},
 	init: function () {
 		// aframe-specific data
@@ -70,7 +72,8 @@ AFRAME.registerComponent("gaussian_splatting", {
 		geometry.setAttribute('splatIndex', splatIndexes);
 		geometry.instanceCount = 1;
 
-
+		console.log("TESTANDO");
+		console.log(this.data.toggle_color);
 		const material = new THREE.ShaderMaterial( {
 			uniforms : {
 				viewport: {value: new Float32Array([1980, 1080])}, // Dummy. will be overwritten
@@ -80,6 +83,8 @@ AFRAME.registerComponent("gaussian_splatting", {
 				gsProjectionMatrix: {value: this.getProjectionMatrix()},
 				gsModelViewMatrix: {value: this.getModelViewMatrix()},
 				time: { value: 0.0 },
+				toggle_color_: { value:+this.data.toggle_color},
+				toggle_offset_: { value:+this.data.toggle_offset},
 			},
 			
 			vertexShader: vertexShaderCode,
@@ -95,6 +100,10 @@ AFRAME.registerComponent("gaussian_splatting", {
 			let projectionMatrix = this.getProjectionMatrix(camera);
 			this.mesh.material.uniforms.gsProjectionMatrix.value = projectionMatrix;
 			this.mesh.material.uniforms.gsModelViewMatrix.value = this.getModelViewMatrix(camera);
+
+			// setting toggle color and offset
+			this.mesh.material.uniforms.toggle_color_.value = +this.data.toggle_color;
+			this.mesh.material.uniforms.toggle_offset_.value = +this.data.toggle_offset;
 
 			let viewport = new THREE.Vector4();
 			renderer.getCurrentViewport(viewport);
@@ -364,7 +373,7 @@ AFRAME.registerComponent("gaussian_splatting", {
 		}
 		  // Update the time uniform
 		if (this.mesh && this.mesh.material.uniforms.time !== undefined) {
-		this.mesh.material.uniforms.time.value = time*0.001; // Convert from ms to seconds if needed
+			this.mesh.material.uniforms.time.value = time*0.001; // Convert from ms to seconds if needed
 		}
 	},
 	getProjectionMatrix: function(camera) {
