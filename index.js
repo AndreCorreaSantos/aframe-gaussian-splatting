@@ -65,6 +65,7 @@ AFRAME.registerComponent("gaussian_splatting", {
 		geometry.setAttribute('splatIndex', splatIndexes);
 		geometry.instanceCount = 1;
 
+
 		const material = new THREE.ShaderMaterial( {
 			uniforms : {
 				viewport: {value: new Float32Array([1980, 1080])}, // Dummy. will be overwritten
@@ -73,6 +74,7 @@ AFRAME.registerComponent("gaussian_splatting", {
 				covAndColorTexture: {value: this.covAndColorTexture},
 				gsProjectionMatrix: {value: this.getProjectionMatrix()},
 				gsModelViewMatrix: {value: this.getModelViewMatrix()},
+				time: { value: 0.0 },
 			},
 			vertexShader: `
 				precision highp sampler2D;
@@ -81,6 +83,7 @@ AFRAME.registerComponent("gaussian_splatting", {
 				out vec4 vColor;
 				out vec2 vPosition;
 				uniform vec2 viewport;
+				uniform float time;
 				uniform float focal;
 				uniform mat4 gsProjectionMatrix;
 				uniform mat4 gsModelViewMatrix;
@@ -166,12 +169,15 @@ AFRAME.registerComponent("gaussian_splatting", {
 			fragmentShader: `
 				in vec4 vColor;
 				in vec2 vPosition;
+				uniform float time;
 
 				void main () {
 					float A = -dot(vPosition, vPosition);
 					if (A < -4.0) discard;
 					float B = exp(A) * vColor.a;
-					gl_FragColor = vec4(vColor.rgb, B);
+					vec3 newCol = vColor.rgb;
+					newCol.r += sin(time)*10.0 ;
+					gl_FragColor = vec4(newCol, B);
 				}
 			`,
 			blending : THREE.CustomBlending,
@@ -183,8 +189,8 @@ AFRAME.registerComponent("gaussian_splatting", {
 
 		material.onBeforeRender = ((renderer, scene, camera, geometry, object, group) => {
 			let projectionMatrix = this.getProjectionMatrix(camera);
-			mesh.material.uniforms.gsProjectionMatrix.value = projectionMatrix;
-			mesh.material.uniforms.gsModelViewMatrix.value = this.getModelViewMatrix(camera);
+			this.mesh.material.uniforms.gsProjectionMatrix.value = projectionMatrix;
+			this.mesh.material.uniforms.gsModelViewMatrix.value = this.getModelViewMatrix(camera);
 
 			let viewport = new THREE.Vector4();
 			renderer.getCurrentViewport(viewport);
@@ -194,15 +200,15 @@ AFRAME.registerComponent("gaussian_splatting", {
 			material.uniforms.focal.value = focal;
 		});
 
-		const mesh = new THREE.Mesh(geometry, material);
-		mesh.frustumCulled = false;
-		this.object.add(mesh);
+		this.mesh = new THREE.Mesh(geometry, material);
+		this.mesh.frustumCulled = false;
+		this.object.add(this.mesh);
 
 		this.worker.onmessage = (e) => {
 			let indexes = new Uint32Array(e.data.sortedIndexes);
-			mesh.geometry.attributes.splatIndex.set(indexes);
-			mesh.geometry.attributes.splatIndex.needsUpdate = true;
-			mesh.geometry.instanceCount = indexes.length;
+			this.mesh.geometry.attributes.splatIndex.set(indexes);
+			this.mesh.geometry.attributes.splatIndex.needsUpdate = true;
+			this.mesh.geometry.instanceCount = indexes.length;
 			this.sortReady = true;
 		};
 
@@ -451,6 +457,10 @@ AFRAME.registerComponent("gaussian_splatting", {
 				view: view.buffer,
 				cutout: this.cutout ? new Float32Array(worldToCutout.elements) : undefined
 			}, [view.buffer]);
+		}
+		  // Update the time uniform
+		if (this.mesh && this.mesh.material.uniforms.time !== undefined) {
+		this.mesh.material.uniforms.time.value = time * 0.001; // Convert from ms to seconds if needed
 		}
 	},
 	getProjectionMatrix: function(camera) {
